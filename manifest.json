@@ -1,0 +1,34 @@
+{
+  "id": "/",
+  "name": "Daymark Habit Tracker",
+  "short_name": "Daymark",
+  "description": "A focused habit tracker for building daily consistency, tracking streaks, and understanding progress.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07090f",
+  "theme_color": "#07090f",
+  "categories": [
+    "health",
+    "lifestyle",
+    "productivity"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

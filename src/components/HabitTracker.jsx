@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -313,59 +313,59 @@ function HabitForm({ habit, onSave, onClose, saving = false }) {
 
   return (
     <form onSubmit={submit}>
-      <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-5 sm:px-6">
+      <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-3.5 sm:px-6 sm:py-5">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-400">Build momentum</p>
-          <h2 className="mt-1 text-xl font-semibold text-white">{habit ? "Edit habit" : "Create a habit"}</h2>
+          <h2 className="mt-0.5 text-lg font-semibold text-white sm:mt-1 sm:text-xl">{habit ? "Edit habit" : "Create a habit"}</h2>
         </div>
-        <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center rounded-xl text-zinc-500 hover:bg-white/5 hover:text-white" aria-label="Close">
+        <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-xl text-zinc-500 hover:bg-white/5 hover:text-white sm:h-11 sm:w-11" aria-label="Close">
           <X size={19} />
         </button>
       </div>
 
-      <div className="space-y-5 p-5 sm:p-6">
+      <div className="space-y-3.5 p-4 sm:space-y-5 sm:p-6">
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-zinc-300">Habit name</span>
+          <span className="mb-1.5 block text-xs font-medium text-zinc-300 sm:mb-2 sm:text-sm">Habit name</span>
           <input
             autoFocus
             value={form.name}
             onChange={(event) => update("name", event.target.value)}
             placeholder="e.g. Journal for 10 minutes"
-            className="h-[52px] w-full rounded-2xl border border-white/10 bg-white/[0.035] px-4 text-base text-white placeholder:text-zinc-600 focus:border-violet-500/70 sm:text-sm"
+            className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.035] px-3.5 text-base text-white placeholder:text-zinc-600 focus:border-violet-500/70 sm:h-[52px] sm:rounded-2xl sm:px-4 sm:text-sm"
           />
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <label>
-            <span className="mb-2 block text-sm font-medium text-zinc-300">Category</span>
+            <span className="mb-1.5 block text-xs font-medium text-zinc-300 sm:mb-2 sm:text-sm">Category</span>
             <div className="relative">
-              <select value={form.category} onChange={(event) => update("category", event.target.value)} className="min-h-[52px] w-full appearance-none rounded-2xl border border-white/10 bg-[#11141c] px-4 text-sm text-white">
+              <select value={form.category} onChange={(event) => update("category", event.target.value)} className="min-h-11 w-full appearance-none rounded-xl border border-white/10 bg-[#11141c] px-3 pr-8 text-xs text-white sm:min-h-[52px] sm:rounded-2xl sm:px-4 sm:pr-10 sm:text-sm">
                 {CATEGORIES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-4 top-[18px] text-zinc-500" size={16} />
+              <ChevronDown className="pointer-events-none absolute right-3 top-3.5 text-zinc-500 sm:right-4 sm:top-[18px]" size={16} />
             </div>
           </label>
           <label>
-            <span className="mb-2 block text-sm font-medium text-zinc-300">Frequency</span>
+            <span className="mb-1.5 block text-xs font-medium text-zinc-300 sm:mb-2 sm:text-sm">Frequency</span>
             <div className="relative">
-              <select value={form.frequency} onChange={(event) => update("frequency", event.target.value)} className="min-h-[52px] w-full appearance-none rounded-2xl border border-white/10 bg-[#11141c] px-4 text-sm text-white">
+              <select value={form.frequency} onChange={(event) => update("frequency", event.target.value)} className="min-h-11 w-full appearance-none rounded-xl border border-white/10 bg-[#11141c] px-3 pr-8 text-xs text-white sm:min-h-[52px] sm:rounded-2xl sm:px-4 sm:pr-10 sm:text-sm">
                 {[1, 2, 3, 4, 5, 6, 7].map((day) => <option key={day} value={day}>{day === 7 ? "Every day" : `${day} days / week`}</option>)}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-4 top-[18px] text-zinc-500" size={16} />
+              <ChevronDown className="pointer-events-none absolute right-3 top-3.5 text-zinc-500 sm:right-4 sm:top-[18px]" size={16} />
             </div>
           </label>
         </div>
 
         <fieldset>
-          <legend className="mb-3 text-sm font-medium text-zinc-300">Color</legend>
-          <div className="flex flex-wrap gap-4">
+          <legend className="mb-2 text-xs font-medium text-zinc-300 sm:mb-3 sm:text-sm">Color</legend>
+          <div className="flex flex-wrap gap-2.5 sm:gap-4">
             {COLORS.map((color) => (
               <motion.button
                 whileTap={{ scale: 0.85 }}
                 type="button"
                 key={color.value}
                 onClick={() => update("color", color.value)}
-                className="grid h-11 w-11 place-items-center rounded-full"
+                className="grid h-9 w-9 place-items-center rounded-full sm:h-11 sm:w-11"
                 style={{ backgroundColor: color.value, boxShadow: form.color === color.value ? `0 0 0 3px #11131a, 0 0 0 5px ${color.value}` : "none" }}
                 aria-label={color.name}
               >
@@ -376,9 +376,9 @@ function HabitForm({ habit, onSave, onClose, saving = false }) {
         </fieldset>
       </div>
 
-      <div className="flex gap-3 border-t border-white/[0.07] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-5 sm:justify-end sm:px-6 sm:py-5">
-        <button type="button" onClick={onClose} className="min-h-12 flex-1 rounded-xl px-4 text-sm font-medium text-zinc-400 hover:bg-white/5 sm:flex-none">Cancel</button>
-        <motion.button whileTap={{ scale: 0.96 }} disabled={saving} type="submit" className="min-h-12 flex-1 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-950/40 hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60 sm:flex-none">
+      <div className="flex gap-3 border-t border-white/[0.07] px-4 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3.5 sm:justify-end sm:px-6 sm:py-5">
+        <button type="button" onClick={onClose} className="min-h-11 flex-1 rounded-xl px-4 text-sm font-medium text-zinc-400 hover:bg-white/5 sm:min-h-12 sm:flex-none">Cancel</button>
+        <motion.button whileTap={{ scale: 0.96 }} disabled={saving} type="submit" className="min-h-11 flex-1 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-950/40 hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60 sm:min-h-12 sm:flex-none">
           {saving ? "Savingâ€¦" : habit ? "Save changes" : "Create habit"}
         </motion.button>
       </div>
@@ -592,6 +592,7 @@ function KpiCard({ icon: Icon, label, value, suffix, color }) {
 }
 
 function ModernHeatmap({ habit }) {
+  const scrollRef = useRef(null);
   const today = new Date();
   const startOfWeek = addDays(today, -today.getDay());
   const start = addDays(startOfWeek, -51 * 7);
@@ -605,6 +606,13 @@ function ModernHeatmap({ habit }) {
       }
     }
   });
+
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (scrollContainer) {
+      scrollContainer.scrollLeft = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+    }
+  }, [habit.id]);
 
   return (
     <section className="glass rounded-3xl p-5 sm:p-6">
@@ -620,7 +628,7 @@ function ModernHeatmap({ habit }) {
         </div>
       </div>
 
-      <div className="heat-scroll mt-7 overflow-x-auto pb-2">
+      <div ref={scrollRef} className="heat-scroll mt-7 overflow-x-auto pb-2">
         <div className="min-w-[1242px]">
           <div className="ml-9 mb-2 grid h-4 gap-x-1.5 text-[10px] font-medium text-zinc-600" style={{ gridTemplateColumns: "repeat(52, 18px)" }}>
             {monthLabels.map((label) => <span key={`${label.column}-${label.text}`} style={{ gridColumn: label.column + 1 }}>{label.text}</span>)}
