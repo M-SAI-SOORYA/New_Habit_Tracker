@@ -579,31 +579,68 @@ function HabitCalendar({ habit }) {
   const daysInMonth = new Date(viewed.getFullYear(), viewed.getMonth() + 1, 0).getDate();
   const leading = viewed.getDay();
   const cells = Array.from({ length: leading + daysInMonth }, (_, index) => index < leading ? null : new Date(viewed.getFullYear(), viewed.getMonth(), index - leading + 1));
+  const todayKey = dateKey();
 
   return (
-    <section className="glass rounded-3xl p-5 sm:p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-white">Calendar</h2>
-          <p className="mt-1 text-xs text-zinc-500">{viewed.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</p>
+    <section className="glass overflow-hidden rounded-3xl">
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-4 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.07]"
+            style={{ color: habit.color, backgroundColor: `${habit.color}12` }}
+          >
+            <CalendarDays size={19} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">Calendar</p>
+            <h2 className="mt-0.5 truncate text-base font-semibold text-white">
+              {viewed.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+            </h2>
+          </div>
         </div>
-        <div className="flex gap-1">
-          <button onClick={() => setMonthOffset((value) => value - 1)} className="grid h-10 w-10 place-items-center rounded-xl text-zinc-500 hover:bg-white/5 hover:text-white" aria-label="Previous month"><ChevronLeft size={17} /></button>
-          <button onClick={() => setMonthOffset((value) => Math.min(0, value + 1))} disabled={monthOffset === 0} className="grid h-10 w-10 place-items-center rounded-xl text-zinc-500 hover:bg-white/5 hover:text-white disabled:opacity-25" aria-label="Next month"><ChevronRight size={17} /></button>
+        <div className="flex shrink-0 gap-1 rounded-xl border border-white/[0.06] bg-black/20 p-1">
+          <button onClick={() => setMonthOffset((value) => value - 1)} className="grid h-9 w-9 place-items-center rounded-lg text-zinc-400 transition hover:bg-white/[0.07] hover:text-white" aria-label="Previous month"><ChevronLeft size={18} /></button>
+          <button onClick={() => setMonthOffset((value) => Math.min(0, value + 1))} disabled={monthOffset === 0} className="grid h-9 w-9 place-items-center rounded-lg text-zinc-400 transition hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-25" aria-label="Next month"><ChevronRight size={18} /></button>
         </div>
       </div>
-      <div className="mt-5 grid grid-cols-7 gap-1.5 text-center">
-        {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => <span key={index} className="pb-2 text-[9px] font-semibold text-zinc-600">{day}</span>)}
+      <div className="grid grid-cols-7 gap-1.5 p-4 pt-3 text-center sm:gap-2 sm:p-5 sm:pt-4">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          <span key={day} className="pb-1.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-500">{day}</span>
+        ))}
         {cells.map((date, index) => {
           if (!date) return <span key={`empty-${index}`} />;
-          const done = Boolean(habit.completions?.[dateKey(date)]);
-          const future = date > new Date();
+          const key = dateKey(date);
+          const done = Boolean(habit.completions?.[key]);
+          const future = key > todayKey;
+          const isToday = key === todayKey;
           return (
-            <div key={dateKey(date)} title={`${date.toLocaleDateString()} — ${done ? "Completed" : future ? "Future" : "Missed"}`} className="grid aspect-square place-items-center rounded-lg text-[10px] font-medium sm:text-xs" style={{ color: done ? "white" : "#71717a", backgroundColor: done ? habit.color : future ? "transparent" : "rgba(255,255,255,.035)" }}>
+            <motion.div
+              key={key}
+              whileHover={{ scale: 1.06 }}
+              title={`${date.toLocaleDateString()} - ${done ? "Completed" : future ? "Future" : "Missed"}`}
+              className={cn(
+                "relative grid aspect-square min-h-9 place-items-center rounded-xl border text-[13px] font-semibold transition sm:min-h-10 sm:text-sm",
+                isToday && "ring-2 ring-white/80 ring-offset-2 ring-offset-[#10131b]",
+                future && "border-transparent text-zinc-700",
+                !future && !done && "border-white/[0.045] bg-white/[0.035] text-zinc-400",
+              )}
+              style={done ? {
+                color: "white",
+                borderColor: `${habit.color}80`,
+                background: `linear-gradient(145deg, ${habit.color}, ${habit.color}c8)`,
+                boxShadow: `0 7px 18px ${habit.color}25`,
+              } : undefined}
+            >
               {date.getDate()}
-            </div>
+              {done && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-white/80" />}
+            </motion.div>
           );
         })}
+      </div>
+      <div className="flex items-center gap-4 border-t border-white/[0.05] px-4 py-3 text-[10px] font-medium text-zinc-500 sm:px-5">
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: habit.color }} /> Completed</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-white/[0.08] bg-white/[0.04]" /> Missed</span>
+        <span className="ml-auto flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-white/70" /> Today</span>
       </div>
     </section>
   );
@@ -669,17 +706,20 @@ function AnalyticsPage({ habit, onBack, onToggle, onEdit, onDelete }) {
           </motion.button>
         </section>
 
-        <section className="mt-8 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
-          <KpiCard icon={Flame} label="Current streak" value={analytics.streak.current} suffix="days" color="#f97316" />
-          <KpiCard icon={Trophy} label="Longest streak" value={analytics.streak.longest} suffix="days" color="#f59e0b" />
-          <KpiCard icon={Target} label="Completion" value={analytics.rate} suffix="%" color={habit.color} />
-          <KpiCard icon={Check} label="Completed" value={analytics.total} suffix="days" color="#22c55e" />
-          <KpiCard icon={X} label="Missed" value={analytics.missed} suffix="days" color="#f43f5e" />
-          <KpiCard icon={CalendarDays} label="Days tracked" value={analytics.totalDays} suffix="" color="#06b6d4" />
+        <section className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-stretch">
+          <HabitCalendar habit={habit} />
+
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+            <KpiCard icon={Flame} label="Current streak" value={analytics.streak.current} suffix="days" color="#f97316" />
+            <KpiCard icon={Trophy} label="Longest streak" value={analytics.streak.longest} suffix="days" color="#f59e0b" />
+            <KpiCard icon={Target} label="Completion" value={analytics.rate} suffix="%" color={habit.color} />
+            <KpiCard icon={Check} label="Completed" value={analytics.total} suffix="days" color="#22c55e" />
+            <KpiCard icon={X} label="Missed" value={analytics.missed} suffix="days" color="#f43f5e" />
+            <KpiCard icon={CalendarDays} label="Days tracked" value={analytics.totalDays} suffix="" color="#06b6d4" />
+          </div>
         </section>
 
-        <section className="mt-4 grid gap-4 lg:grid-cols-[0.72fr_1.28fr]">
-          <HabitCalendar habit={habit} />
+        <section className="mt-4">
           <ModernHeatmap habit={habit} />
         </section>
 
