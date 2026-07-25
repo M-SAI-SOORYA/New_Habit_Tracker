@@ -1,4 +1,4 @@
-# Pulse Habit Tracker
+# Daymark Habit Tracker
 
 A polished, mobile-first React habit tracker with local persistence and animated interactions. The minimal dashboard is dedicated to completing habits; selecting a habit opens a full analytics view with KPIs, a 12-week activity heatmap, weekly and monthly trends, a calendar, streak history, consistency scoring, and personalized insights.
 
