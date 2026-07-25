@@ -143,11 +143,36 @@ function rateForDates(habit, dates) {
   return Math.round((complete / eligible.length) * 100);
 }
 
+function formatStreakPeriod(run) {
+  if (!run) return "No streak yet";
+  const start = run.start;
+  const end = run.end;
+  const sameDay = dateKey(start) === dateKey(end);
+  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+  const sameYear = start.getFullYear() === end.getFullYear();
+
+  if (sameDay) {
+    return start.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  if (sameMonth) {
+    return `${start.toLocaleDateString(undefined, { month: "short" })} ${start.getDate()}-${end.getDate()}, ${end.getFullYear()}`;
+  }
+
+  if (sameYear) {
+    return `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+  }
+
+  return `${start.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} - ${end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+}
+
 function habitAnalytics(habit) {
   const dates = trackedDates(habit);
   const total = dates.filter((date) => habit.completions?.[dateKey(date)]).length;
   const rate = dates.length ? Math.round((total / dates.length) * 100) : 0;
   const last30 = rateForDates(habit, rangeEndingToday(30));
+  const last7 = rateForDates(habit, rangeEndingToday(7));
+  const previous7 = rateForDates(habit, rangeEndingToday(7, 7));
   const streak = getStreakData(habit);
   const weekdayMisses = Array(7).fill(0);
   const weekdaySuccess = Array(7).fill(0);
@@ -166,18 +191,89 @@ function habitAnalytics(habit) {
     .map((value, index) => ({ index, value }))
     .sort((a, b) => b.value - a.value)[0]?.index ?? 1;
   const consistency = Math.round(rate * 0.65 + last30 * 0.35);
+  const weekdayStats = weekdayTotals.map((totalForDay, index) => {
+    const completedForDay = weekdaySuccess[index];
+    return {
+      index,
+      label: new Date(2024, 0, 7 + index).toLocaleDateString(undefined, { weekday: "long" }),
+      completed: completedForDay,
+      missed: weekdayMisses[index],
+      total: totalForDay,
+      rate: totalForDay ? Math.round((completedForDay / totalForDay) * 100) : 0,
+    };
+  });
 
   return {
     total,
     missed: dates.length - total,
     rate,
     last30,
+    last7,
+    previous7,
     totalDays: dates.length,
     consistency,
     streak,
     bestWeekday: new Date(2024, 0, 7 + bestWeekdayIndex).toLocaleDateString(undefined, { weekday: "long" }),
     missedWeekday: new Date(2024, 0, 7 + missedWeekdayIndex).toLocaleDateString(undefined, { weekday: "long" }),
+    weekdayStats,
   };
+}
+
+function buildSmartInsights(analytics) {
+  if (analytics.totalDays <= 1) {
+    return ["Complete this habit for a few more days to unlock useful patterns."];
+  }
+
+  const insights = [];
+  const reliableWeekdays = analytics.weekdayStats.filter((day) => day.total >= 2);
+  const bestDay = reliableWeekdays
+    .filter((day) => day.completed > 0)
+    .sort((a, b) => b.rate - a.rate || b.completed - a.completed)[0];
+  const missedDay = reliableWeekdays
+    .filter((day) => day.missed > 0)
+    .sort((a, b) => b.missed - a.missed || a.rate - b.rate)[0];
+
+  if (analytics.total === 0) {
+    insights.push(`You have ${analytics.totalDays} tracked days, but no completions yet.`);
+  } else if (bestDay) {
+    insights.push(`You are most consistent on ${bestDay.label}s with a ${bestDay.rate}% completion rate.`);
+  }
+
+  if (analytics.totalDays >= 7) {
+    if (analytics.last7 > analytics.previous7) {
+      insights.push(`Your last 7 days improved by ${analytics.last7 - analytics.previous7} points compared with the previous week.`);
+    } else if (analytics.last7 < analytics.previous7) {
+      insights.push(`Your last 7 days dropped by ${analytics.previous7 - analytics.last7} points compared with the previous week.`);
+    } else {
+      insights.push(`Your last 7 days are steady at ${analytics.last7}%.`);
+    }
+  }
+
+  if (analytics.totalDays >= 30) {
+    insights.push(`You completed this habit ${analytics.last30}% of the last 30 days.`);
+  } else {
+    insights.push(`You completed this habit ${analytics.rate}% across ${analytics.totalDays} tracked days.`);
+  }
+
+  if (analytics.streak.current > 0 && analytics.streak.rank) {
+    if (analytics.streak.rank === 1) {
+      insights.push("Your current streak is your longest streak so far.");
+    } else if (analytics.streak.rank === 2) {
+      insights.push("Your current streak is your second longest streak.");
+    } else {
+      insights.push(`Your current streak ranks #${analytics.streak.rank} among your streaks.`);
+    }
+  } else if (analytics.streak.longest > 0) {
+    insights.push(`Your longest streak lasted ${analytics.streak.longest} days.`);
+  } else {
+    insights.push("No streak has started yet. Completing today will create your first streak.");
+  }
+
+  if (missedDay) {
+    insights.push(`${missedDay.label} is your most missed weekday with ${missedDay.missed} missed ${missedDay.missed === 1 ? "day" : "days"}.`);
+  }
+
+  return insights.slice(0, 5);
 }
 
 function Modal({ open, onClose, children }) {
@@ -404,7 +500,7 @@ function DashboardHabitCard({ habit, onOpen, onToggle, onEdit, onDelete }) {
         >
           <AnimatePresence mode="wait">
             <motion.span key={String(todayDone)} initial={{ scale: 0, rotate: -25 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }}>
-              {todayDone ? <Check size={24} strokeWidth={3} /> : <Plus size={21} />}
+              <Check size={todayDone ? 24 : 22} strokeWidth={todayDone ? 3 : 2.5} />
             </motion.span>
           </AnimatePresence>
         </motion.button>
@@ -662,6 +758,7 @@ function HabitCalendar({ habit }) {
 
 function AnalyticsPage({ habit, onBack, onToggle, onEdit, onDelete }) {
   const analytics = useMemo(() => habitAnalytics(habit), [habit]);
+  const smartInsights = useMemo(() => buildSmartInsights(analytics), [analytics]);
   const Icon = ICONS[habit.category] || Target;
   const todayDone = Boolean(habit.completions?.[dateKey()]);
   const weekly = Array.from({ length: 8 }, (_, index) => {
@@ -678,9 +775,7 @@ function AnalyticsPage({ habit, onBack, onToggle, onEdit, onDelete }) {
     const dates = Array.from({ length }, (_, day) => new Date(date.getFullYear(), date.getMonth(), day + 1));
     return { label: start.toLocaleDateString(undefined, { month: "short" }), value: rateForDates(habit, dates) };
   });
-  const bestPeriod = analytics.streak.bestRun
-    ? `${analytics.streak.bestRun.start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} â€“ ${analytics.streak.bestRun.end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
-    : "No streak yet";
+  const bestPeriod = formatStreakPeriod(analytics.streak.bestRun);
 
   return (
     <motion.div key={habit.id} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }} className="min-h-screen">
@@ -715,7 +810,7 @@ function AnalyticsPage({ habit, onBack, onToggle, onEdit, onDelete }) {
             className={cn("flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-semibold sm:w-auto", todayDone ? "border-transparent text-white" : "border-white/10 bg-white/[0.035] text-zinc-300")}
             style={todayDone ? { backgroundColor: habit.color, boxShadow: `0 0 24px ${habit.color}38` } : {}}
           >
-            {todayDone ? <Check size={19} strokeWidth={3} /> : <Plus size={19} />}
+            <Check size={19} strokeWidth={todayDone ? 3 : 2.5} />
             {todayDone ? "Completed today" : "Mark complete"}
           </motion.button>
         </section>
@@ -766,12 +861,7 @@ function AnalyticsPage({ habit, onBack, onToggle, onEdit, onDelete }) {
             </div>
 
             <div className="mt-4 space-y-2.5">
-              {[
-                `You're most consistent on ${analytics.bestWeekday}s.`,
-                `You've completed this habit ${analytics.last30}% of the last 30 days.`,
-                analytics.streak.rank === 2 ? "Your current streak is your second longest." : `Your longest streak lasted ${analytics.streak.longest} days.`,
-                `${analytics.missedWeekday} is your most missed weekday.`,
-              ].map((insight) => (
+              {smartInsights.map((insight) => (
                 <div key={insight} className="flex gap-3 rounded-xl bg-white/[0.025] px-3.5 py-3 text-xs leading-5 text-zinc-400">
                   <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: habit.color }} />
                   {insight}
