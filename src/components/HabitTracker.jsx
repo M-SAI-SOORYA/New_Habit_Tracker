@@ -459,6 +459,82 @@ function Brand() {
   );
 }
 
+function LoadingScreen() {
+  return (
+    <motion.div
+      key="loading"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      className="relative grid min-h-screen place-items-center overflow-hidden px-6"
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.12),transparent_34%),linear-gradient(180deg,rgba(139,92,246,0.06),transparent_45%,rgba(6,182,212,0.05))]" />
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-25"
+        style={{
+          backgroundImage: "linear-gradient(rgba(34,211,238,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.16) 1px, transparent 1px)",
+          backgroundSize: "42px 42px",
+        }}
+        animate={{ backgroundPosition: ["0px 0px", "42px 42px"] }}
+        transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+      />
+
+      <div className="relative flex flex-col items-center">
+        <div className="relative grid h-48 w-48 place-items-center sm:h-56 sm:w-56">
+          <motion.div
+            className="absolute inset-0 rounded-full border border-cyan-300/30 shadow-[0_0_44px_rgba(34,211,238,0.22)]"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+          >
+            <span className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 rounded-full bg-cyan-200 shadow-[0_0_20px_rgba(103,232,249,0.9)]" />
+            <span className="absolute bottom-3 right-8 h-2 w-2 rounded-full bg-violet-300 shadow-[0_0_18px_rgba(196,181,253,0.9)]" />
+          </motion.div>
+          <motion.div
+            className="absolute inset-6 rounded-full border border-violet-300/30 border-t-violet-200"
+            animate={{ rotate: -360 }}
+            transition={{ duration: 5.5, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.div
+            className="absolute inset-14 rounded-full border border-amber-200/30 border-b-amber-100 shadow-[inset_0_0_26px_rgba(251,191,36,0.16)]"
+            animate={{ rotate: 360, scale: [0.96, 1.04, 0.96] }}
+            transition={{ rotate: { duration: 3.2, repeat: Infinity, ease: "linear" }, scale: { duration: 1.8, repeat: Infinity, ease: "easeInOut" } }}
+          />
+          <motion.div
+            className="absolute h-1 w-36 rounded-full bg-gradient-to-r from-transparent via-cyan-200 to-transparent blur-[1px]"
+            animate={{ rotate: [0, 360], opacity: [0.35, 1, 0.35] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "linear" }}
+          />
+          <div className="relative grid h-24 w-24 place-items-center rounded-full border border-white/10 bg-[#0b1020]/80 shadow-[0_0_50px_rgba(139,92,246,0.32)] backdrop-blur-xl">
+            <motion.div
+              className="absolute inset-3 rounded-full bg-cyan-300/10"
+              animate={{ scale: [0.8, 1.16, 0.8], opacity: [0.3, 0.75, 0.3] }}
+              transition={{ duration: 1.45, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <Sparkles className="relative text-cyan-100 drop-shadow-[0_0_16px_rgba(165,243,252,0.9)]" size={34} />
+          </div>
+        </div>
+
+        <div className="mt-7 text-center">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-cyan-200/80">Syncing Core</p>
+          <h1 className="mt-3 text-xl font-semibold tracking-normal text-white sm:text-2xl">Loading your habits</h1>
+          <div className="mx-auto mt-5 flex w-56 items-end justify-center gap-1.5">
+            {[0.35, 0.55, 0.8, 1, 0.72, 0.48, 0.3].map((height, index) => (
+              <motion.span
+                key={height}
+                className="w-2 rounded-full bg-gradient-to-t from-violet-500 via-cyan-300 to-white shadow-[0_0_14px_rgba(34,211,238,0.45)]"
+                style={{ height: `${height * 30}px` }}
+                animate={{ scaleY: [0.35, 1, 0.35], opacity: [0.35, 1, 0.35] }}
+                transition={{ duration: 1.1, repeat: Infinity, delay: index * 0.08, ease: "easeInOut" }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 function DashboardHabitCard({ habit, onOpen, onToggle, onEdit, onDelete }) {
   const [menu, setMenu] = useState(false);
   const Icon = ICONS[habit.category] || Target;
@@ -1012,7 +1088,7 @@ export default function HabitTracker() {
 
       <AnimatePresence mode="wait">
         {loading ? (
-          <div className="grid min-h-screen place-items-center text-sm text-zinc-500">Loading your HABITS🙂‍↔️😶‍🌫️</div>
+          <LoadingScreen />
         ) : selectedHabit ? (
           <AnalyticsPage key={`analytics-${selectedHabit.id}`} habit={selectedHabit} onBack={() => setSelectedId(null)} onToggle={toggleHabit} onEdit={openEdit} onDelete={requestDeleteHabit} />
         ) : (
