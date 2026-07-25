@@ -379,7 +379,7 @@ function HabitForm({ habit, onSave, onClose, saving = false }) {
       <div className="flex gap-3 border-t border-white/[0.07] px-4 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3.5 sm:justify-end sm:px-6 sm:py-5">
         <button type="button" onClick={onClose} className="min-h-11 flex-1 rounded-xl px-4 text-sm font-medium text-zinc-400 hover:bg-white/5 sm:min-h-12 sm:flex-none">Cancel</button>
         <motion.button whileTap={{ scale: 0.96 }} disabled={saving} type="submit" className="min-h-11 flex-1 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-950/40 hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60 sm:min-h-12 sm:flex-none">
-          {saving ? "Savingâ€¦" : habit ? "Save changes" : "Create habit"}
+          {saving ? "Saving" : habit ? "Save changes" : "Create habit"}
         </motion.button>
       </div>
     </form>
@@ -649,7 +649,7 @@ function ModernHeatmap({ habit }) {
                   <motion.div
                     whileHover={{ scale: 1.35, zIndex: 10 }}
                     key={key}
-                    title={`${date.toLocaleDateString(undefined, { weekday: "short", month: "long", day: "numeric" })} â€” ${future ? "Future" : !tracked ? "Not tracked" : done ? "Completed" : "Missed"}`}
+                    title={`${date.toLocaleDateString(undefined, { weekday: "short", month: "long", day: "numeric" })} ” ${future ? "Future" : !tracked ? "Not tracked" : done ? "Completed" : "Missed"}`}
                     className="h-[18px] w-[18px] rounded-[5px] border border-white/[0.035]"
                     style={{ backgroundColor: future || !tracked ? "#13161d" : done ? `${habit.color}${Math.round(level * 255).toString(16).padStart(2, "0")}` : "#20232c" }}
                   />
@@ -1012,7 +1012,7 @@ export default function HabitTracker() {
 
       <AnimatePresence mode="wait">
         {loading ? (
-          <div className="grid min-h-screen place-items-center text-sm text-zinc-500">Loading your habitsâ€¦</div>
+          <div className="grid min-h-screen place-items-center text-sm text-zinc-500">Loading your HABITS🙂‍↔️😶‍🌫️</div>
         ) : selectedHabit ? (
           <AnalyticsPage key={`analytics-${selectedHabit.id}`} habit={selectedHabit} onBack={() => setSelectedId(null)} onToggle={toggleHabit} onEdit={openEdit} onDelete={requestDeleteHabit} />
         ) : (
