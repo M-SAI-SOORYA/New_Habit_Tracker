@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  AlertTriangle,
   ArrowLeft,
   BarChart3,
   BookOpen,
@@ -30,9 +31,9 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { habitApi } from "../lib/api";
 
 const cn = (...inputs) => twMerge(clsx(inputs));
-const STORAGE_KEY = "pulse-habits-v1";
 const DAY_MS = 86_400_000;
 
 const COLORS = [
@@ -88,55 +89,6 @@ function daysBetween(start, end) {
 
 function rangeEndingToday(length, offset = 0) {
   return Array.from({ length }, (_, index) => addDays(new Date(), index - length + 1 - offset));
-}
-
-function seedCompletions(pattern) {
-  return Object.fromEntries(
-    rangeEndingToday(120)
-      .filter((date, index) => pattern(date, index))
-      .map((date) => [dateKey(date), true]),
-  );
-}
-
-function seedHabits() {
-  return [
-    {
-      id: "seed-meditate",
-      name: "Morning meditation",
-      category: "mindfulness",
-      color: "#8b5cf6",
-      frequency: 7,
-      createdAt: dateKey(addDays(new Date(), -119)),
-      completions: seedCompletions((_, i) => i % 7 !== 1 && i % 11 !== 0),
-    },
-    {
-      id: "seed-workout",
-      name: "Strength training",
-      category: "fitness",
-      color: "#22c55e",
-      frequency: 4,
-      createdAt: dateKey(addDays(new Date(), -104)),
-      completions: seedCompletions((date, i) => ![0, 3, 6].includes(date.getDay()) && i % 13 !== 0),
-    },
-    {
-      id: "seed-read",
-      name: "Read 20 pages",
-      category: "learning",
-      color: "#06b6d4",
-      frequency: 5,
-      createdAt: dateKey(addDays(new Date(), -92)),
-      completions: seedCompletions((date, i) => date.getDay() !== 6 && i % 9 !== 0),
-    },
-  ];
-}
-
-function loadHabits() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : seedHabits();
-  } catch {
-    return seedHabits();
-  }
 }
 
 function getStreakData(habit) {
@@ -254,7 +206,7 @@ function Modal({ open, onClose, children }) {
   );
 }
 
-function HabitForm({ habit, onSave, onClose }) {
+function HabitForm({ habit, onSave, onClose, saving = false }) {
   const [form, setForm] = useState(habit || { name: "", category: "fitness", color: "#8b5cf6", frequency: 7 });
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -330,11 +282,73 @@ function HabitForm({ habit, onSave, onClose }) {
 
       <div className="flex gap-3 border-t border-white/[0.07] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-5 sm:justify-end sm:px-6 sm:py-5">
         <button type="button" onClick={onClose} className="min-h-12 flex-1 rounded-xl px-4 text-sm font-medium text-zinc-400 hover:bg-white/5 sm:flex-none">Cancel</button>
-        <motion.button whileTap={{ scale: 0.96 }} type="submit" className="min-h-12 flex-1 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-950/40 hover:bg-violet-500 sm:flex-none">
-          {habit ? "Save changes" : "Create habit"}
+        <motion.button whileTap={{ scale: 0.96 }} disabled={saving} type="submit" className="min-h-12 flex-1 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-950/40 hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60 sm:flex-none">
+          {saving ? "Savingâ€¦" : habit ? "Save changes" : "Create habit"}
         </motion.button>
       </div>
     </form>
+  );
+}
+
+function DeleteHabitDialog({ habit, deleting = false, onCancel, onConfirm }) {
+  if (!habit) return null;
+
+  return (
+    <div>
+      <div className="flex items-start gap-4 border-b border-white/[0.07] px-5 py-5 sm:px-6">
+        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-rose-400/20 bg-rose-500/10 text-rose-300 shadow-lg shadow-rose-950/30">
+          <AlertTriangle size={22} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-300">Delete habit</p>
+          <h2 className="mt-1 text-xl font-semibold text-white">Remove {habit.name}?</h2>
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            This will permanently delete the habit and all of its completion history.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={deleting}
+          className="grid h-10 w-10 place-items-center rounded-xl text-zinc-500 hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+          aria-label="Close"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className="px-5 py-5 sm:px-6">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
+          <div className="flex items-center gap-3">
+            <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: habit.color }} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{habit.name}</p>
+              <p className="mt-0.5 text-xs text-zinc-500">Analytics and streak data will be removed.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-3 border-t border-white/[0.07] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-5 sm:justify-end sm:px-6 sm:py-5">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={deleting}
+          className="min-h-12 flex-1 rounded-xl px-4 text-sm font-medium text-zinc-400 hover:bg-white/5 disabled:pointer-events-none disabled:opacity-50 sm:flex-none"
+        >
+          Cancel
+        </button>
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          type="button"
+          onClick={onConfirm}
+          disabled={deleting}
+          className="min-h-12 flex-1 rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white shadow-lg shadow-rose-950/40 hover:bg-rose-500 disabled:cursor-wait disabled:opacity-60 sm:flex-none"
+        >
+          {deleting ? "Deleting..." : "Delete habit"}
+        </motion.button>
+      </div>
+    </div>
   );
 }
 
@@ -344,7 +358,7 @@ function Brand() {
       <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-700 shadow-lg shadow-violet-950/40">
         <Zap size={18} fill="currentColor" />
       </div>
-      <span className="text-base font-bold tracking-tight text-white">daymark</span>
+      <span className="text-base font-bold tracking-tight text-white">CONSISTENCY</span>
     </div>
   );
 }
@@ -439,7 +453,7 @@ function Dashboard({ habits, onOpen, onAdd, onToggle, onEdit, onDelete }) {
         <div>
           <p className="flex items-center gap-2 text-xs font-medium text-violet-400"><Sparkles size={14} /> {greeting}</p>
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.035em] text-white sm:text-4xl">Today</h1>
-          <p className="mt-2 text-sm text-zinc-500">{completed} of {habits.length} completed · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
+          <p className="mt-2 text-sm text-zinc-500">{completed} of {habits.length} completed Â· {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
         </div>
 
         <section className="mt-8 space-y-3" aria-label="Your habits">
@@ -531,7 +545,7 @@ function ModernHeatmap({ habit }) {
                   <motion.div
                     whileHover={{ scale: 1.35, zIndex: 10 }}
                     key={key}
-                    title={`${date.toLocaleDateString(undefined, { weekday: "short", month: "long", day: "numeric" })} — ${future ? "Future" : !tracked ? "Not tracked" : done ? "Completed" : "Missed"}`}
+                    title={`${date.toLocaleDateString(undefined, { weekday: "short", month: "long", day: "numeric" })} â€” ${future ? "Future" : !tracked ? "Not tracked" : done ? "Completed" : "Missed"}`}
                     className="h-[18px] w-[18px] rounded-[5px] border border-white/[0.035]"
                     style={{ backgroundColor: future || !tracked ? "#13161d" : done ? `${habit.color}${Math.round(level * 255).toString(16).padStart(2, "0")}` : "#20232c" }}
                   />
@@ -665,7 +679,7 @@ function AnalyticsPage({ habit, onBack, onToggle, onEdit, onDelete }) {
     return { label: start.toLocaleDateString(undefined, { month: "short" }), value: rateForDates(habit, dates) };
   });
   const bestPeriod = analytics.streak.bestRun
-    ? `${analytics.streak.bestRun.start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${analytics.streak.bestRun.end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+    ? `${analytics.streak.bestRun.start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} â€“ ${analytics.streak.bestRun.end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
     : "No streak yet";
 
   return (
@@ -778,28 +792,48 @@ function AnalyticsPage({ habit, onBack, onToggle, onEdit, onDelete }) {
 
 export default function HabitTracker() {
   const [habits, setHabits] = useState([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    setHabits(loadHabits());
-    setHydrated(true);
+    let active = true;
+    habitApi.list()
+      .then((data) => { if (active) setHabits(data || []); })
+      .catch((requestError) => { if (active) setError(requestError.message); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  useEffect(() => {
-    if (hydrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
-  }, [habits, hydrated]);
-
   const selectedHabit = habits.find((habit) => habit.id === selectedId);
+  const deleteTarget = habits.find((habit) => habit.id === deleteTargetId);
 
-  const toggleHabit = (id) => {
+  const toggleHabit = async (id) => {
     if (navigator.vibrate) navigator.vibrate(18);
     const today = dateKey();
-    setHabits((current) => current.map((habit) => habit.id === id
-      ? { ...habit, completions: { ...habit.completions, [today]: !habit.completions?.[today] } }
-      : habit));
+    const habit = habits.find((item) => item.id === id);
+    if (!habit) return;
+    const completed = !habit.completions?.[today];
+    setError("");
+    setHabits((current) => current.map((item) => {
+      if (item.id !== id) return item;
+      const completions = { ...item.completions };
+      if (completed) completions[today] = true;
+      else delete completions[today];
+      return { ...item, completions };
+    }));
+    try {
+      const updated = await habitApi.setCompletion(id, today, completed);
+      setHabits((current) => current.map((item) => item.id === id ? updated : item));
+    } catch (requestError) {
+      setHabits((current) => current.map((item) => item.id === id ? habit : item));
+      setError(requestError.message);
+    }
   };
 
   const openAdd = () => {
@@ -812,21 +846,53 @@ export default function HabitTracker() {
     setModalOpen(true);
   };
 
-  const saveHabit = (form) => {
-    if (editingHabit) {
-      setHabits((current) => current.map((habit) => habit.id === editingHabit.id ? { ...habit, ...form } : habit));
-    } else {
-      setHabits((current) => [...current, { ...form, id: crypto.randomUUID(), createdAt: dateKey(), completions: {} }]);
+  const saveHabit = async (form) => {
+    setSaving(true);
+    setError("");
+    try {
+      const habitFields = {
+        name: form.name,
+        category: form.category,
+        color: form.color,
+        frequency: Number(form.frequency),
+      };
+      const saved = editingHabit
+        ? await habitApi.update(editingHabit.id, habitFields)
+        : await habitApi.create(habitFields);
+      setHabits((current) => editingHabit
+        ? current.map((habit) => habit.id === saved.id ? saved : habit)
+        : [...current, saved]);
+      setModalOpen(false);
+      setEditingHabit(null);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false);
-    setEditingHabit(null);
   };
 
-  const deleteHabit = (id) => {
-    const habit = habits.find((item) => item.id === id);
-    if (habit && window.confirm(`Delete “${habit.name}”? This cannot be undone.`)) {
+  const requestDeleteHabit = (id) => {
+    setDeleteTargetId(id);
+  };
+
+  const closeDeleteDialog = () => {
+    if (!deleting) setDeleteTargetId(null);
+  };
+
+  const confirmDeleteHabit = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleting(true);
+    setError("");
+    try {
+      await habitApi.remove(id);
       setHabits((current) => current.filter((item) => item.id !== id));
       if (selectedId === id) setSelectedId(null);
+      setDeleteTargetId(null);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -837,16 +903,31 @@ export default function HabitTracker() {
         <div className="absolute -right-48 top-1/2 h-[420px] w-[420px] rounded-full bg-cyan-600/[0.045] blur-[120px]" />
       </div>
 
+      {error && (
+        <div className="fixed left-4 right-4 top-4 z-[60] mx-auto max-w-lg rounded-2xl border border-rose-400/20 bg-rose-950/90 px-4 py-3 text-sm text-rose-100 shadow-2xl backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-3">
+            <span>{error}</span>
+            <button onClick={() => setError("")} className="text-rose-300 hover:text-white" aria-label="Dismiss error"><X size={16} /></button>
+          </div>
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
-        {selectedHabit ? (
-          <AnalyticsPage key={`analytics-${selectedHabit.id}`} habit={selectedHabit} onBack={() => setSelectedId(null)} onToggle={toggleHabit} onEdit={openEdit} onDelete={deleteHabit} />
+        {loading ? (
+          <div className="grid min-h-screen place-items-center text-sm text-zinc-500">Loading your habitsâ€¦</div>
+        ) : selectedHabit ? (
+          <AnalyticsPage key={`analytics-${selectedHabit.id}`} habit={selectedHabit} onBack={() => setSelectedId(null)} onToggle={toggleHabit} onEdit={openEdit} onDelete={requestDeleteHabit} />
         ) : (
-          <Dashboard key="dashboard" habits={habits} onOpen={setSelectedId} onAdd={openAdd} onToggle={toggleHabit} onEdit={openEdit} onDelete={deleteHabit} />
+          <Dashboard key="dashboard" habits={habits} onOpen={setSelectedId} onAdd={openAdd} onToggle={toggleHabit} onEdit={openEdit} onDelete={requestDeleteHabit} />
         )}
       </AnimatePresence>
 
       <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditingHabit(null); }}>
-        <HabitForm habit={editingHabit} onSave={saveHabit} onClose={() => { setModalOpen(false); setEditingHabit(null); }} />
+        <HabitForm habit={editingHabit} onSave={saveHabit} onClose={() => { setModalOpen(false); setEditingHabit(null); }} saving={saving} />
+      </Modal>
+
+      <Modal open={Boolean(deleteTarget)} onClose={closeDeleteDialog}>
+        <DeleteHabitDialog habit={deleteTarget} deleting={deleting} onCancel={closeDeleteDialog} onConfirm={confirmDeleteHabit} />
       </Modal>
     </div>
   );
