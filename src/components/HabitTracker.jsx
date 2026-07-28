@@ -91,6 +91,22 @@ function rangeEndingToday(length, offset = 0) {
   return Array.from({ length }, (_, index) => addDays(new Date(), index - length + 1 - offset));
 }
 
+function habitFrequency(habit) {
+  const frequency = Number(habit.frequency) || 7;
+  return Math.min(7, Math.max(1, frequency));
+}
+
+function targetForDateCount(count, habit) {
+  if (!count) return 0;
+  return Math.min(count, Math.ceil((count * habitFrequency(habit)) / 7));
+}
+
+function currentWeekDates() {
+  const today = new Date();
+  const startOfWeek = addDays(today, -today.getDay());
+  return Array.from({ length: today.getDay() + 1 }, (_, index) => addDays(startOfWeek, index));
+}
+
 function getStreakData(habit) {
   const done = habit.completions || {};
   const completedKeys = Object.keys(done).filter((key) => done[key]).sort();
@@ -140,7 +156,17 @@ function rateForDates(habit, dates) {
   const eligible = dates.filter((date) => dateKey(date) >= habit.createdAt && dateKey(date) <= today);
   if (!eligible.length) return 0;
   const complete = eligible.filter((date) => habit.completions?.[dateKey(date)]).length;
-  return Math.round((complete / eligible.length) * 100);
+  const target = targetForDateCount(eligible.length, habit);
+  return Math.min(100, Math.round((complete / target) * 100));
+}
+
+function weeklyTargetRate(habit) {
+  const target = habitFrequency(habit);
+  const completions = currentWeekDates()
+    .filter((date) => dateKey(date) >= habit.createdAt && habit.completions?.[dateKey(date)])
+    .length;
+
+  return Math.min(100, Math.round((completions / target) * 100));
 }
 
 function formatStreakPeriod(run) {
@@ -169,7 +195,8 @@ function formatStreakPeriod(run) {
 function habitAnalytics(habit) {
   const dates = trackedDates(habit);
   const total = dates.filter((date) => habit.completions?.[dateKey(date)]).length;
-  const rate = dates.length ? Math.round((total / dates.length) * 100) : 0;
+  const target = targetForDateCount(dates.length, habit);
+  const rate = target ? Math.min(100, Math.round((total / target) * 100)) : 0;
   const last30 = rateForDates(habit, rangeEndingToday(30));
   const last7 = rateForDates(habit, rangeEndingToday(7));
   const previous7 = rateForDates(habit, rangeEndingToday(7, 7));
@@ -205,7 +232,7 @@ function habitAnalytics(habit) {
 
   return {
     total,
-    missed: dates.length - total,
+    missed: Math.max(0, target - total),
     rate,
     last30,
     last7,
@@ -540,7 +567,7 @@ function DashboardHabitCard({ habit, onOpen, onToggle, onEdit, onDelete }) {
   const Icon = ICONS[habit.category] || Target;
   const todayDone = Boolean(habit.completions?.[dateKey()]);
   const streak = getStreakData(habit);
-  const weekRate = rateForDates(habit, rangeEndingToday(7));
+  const weekRate = weeklyTargetRate(habit);
 
   return (
     <motion.article
