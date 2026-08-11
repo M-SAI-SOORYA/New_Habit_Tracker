@@ -98,7 +98,11 @@ function habitFrequency(habit) {
 
 function targetForDateCount(count, habit) {
   if (!count) return 0;
-  return Math.min(count, Math.ceil((count * habitFrequency(habit)) / 7));
+  return Math.min(count, (count * habitFrequency(habit)) / 7);
+}
+
+function missedForTarget(target, completions) {
+  return Math.max(0, Math.ceil(target - completions));
 }
 
 function currentWeekDates() {
@@ -217,7 +221,7 @@ function habitAnalytics(habit) {
   const missedWeekdayIndex = weekdayMisses
     .map((value, index) => ({ index, value }))
     .sort((a, b) => b.value - a.value)[0]?.index ?? 1;
-  const consistency = Math.round(rate * 0.65 + last30 * 0.35);
+  const consistency = last30;
   const weekdayStats = weekdayTotals.map((totalForDay, index) => {
     const completedForDay = weekdaySuccess[index];
     return {
@@ -232,7 +236,7 @@ function habitAnalytics(habit) {
 
   return {
     total,
-    missed: Math.max(0, target - total),
+    missed: missedForTarget(target, total),
     rate,
     last30,
     last7,
@@ -277,7 +281,7 @@ function buildSmartInsights(analytics) {
   }
 
   if (analytics.totalDays >= 30) {
-    insights.push(`You completed this habit ${analytics.last30}% of the last 30 days.`);
+    insights.push(`You hit ${analytics.last30}% of your expected target in the last 30 days.`);
   } else {
     insights.push(`You completed this habit ${analytics.rate}% across ${analytics.totalDays} tracked days.`);
   }
